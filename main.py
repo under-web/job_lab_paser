@@ -1,10 +1,12 @@
 import time
 import requests
 import csv
+import random
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
+
 
 def get_requests(url):
     ua = UserAgent()
@@ -25,37 +27,48 @@ def get_html_url(html):
             print('https://joblab.ru' + i.get('href'))
     return clear_url
 
+def csv_writer(out_data):
+    with open("koo.csv", mode="a", encoding='utf-8', errors='ignore') as csv_file:
+        file_writer = csv.writer(csv_file, delimiter=";")
+        file_writer.writerow(out_data)
 
 def get_html_data(clear_url):
     opts = Options()
     opts.headless = True
     assert opts.headless
     # browser = webdriver.Firefox(options=opts)
+    global browser
     browser = webdriver.Firefox()
     browser.get('https://joblab.ru/')
 
     input('Нажмите ENTER')
     for url in clear_url:
-
-        # browser.switch_to.window(browser.window_handles[-1])
+        time.sleep(1)
+        browser.switch_to.window(browser.window_handles[-1])
         browser.execute_script(f"window.open('{url}')")
         time.sleep(1)
         browser.switch_to.window(browser.window_handles[-1])
-
+        # try:
+        #     kaptha = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/form/table/tbody').text
+        #     if 'Чтобы продолжить' in kaptha:
+        #         input('Введите капчу и нажмите ENTER! ')
+        # except Exception:
+        #     kaptha = ''
+        #     print('ok')
 
         try:
             vacantion = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/h1').text
         except Exception:
             vacantion = ''
 
-        try:
-            organization = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[1]/td[2]/p/b/a').text
-        except Exception:
-            organization = ''
+        # try:
+        #     organization = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[1]/td[2]/p/b/a').text
+        # except Exception:
+        #     organization = ''
 
         try:
             name = browser.find_element('xpath',
-                                        '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[2]/td[2]/p').text
+                                        '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[1]/td[2]/p/b').text
         except Exception:
             name = ''
 
@@ -65,7 +78,7 @@ def get_html_data(clear_url):
             phone_hide.click()
             time.sleep(1)
             phone = browser.find_element('xpath',
-                                         '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[3]/td[2]/p/span/a').text
+                                         '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[2]/td[2]/p/span/a').text
         except Exception:
             phone = ''
 
@@ -79,34 +92,50 @@ def get_html_data(clear_url):
         except Exception:
             email = ''
 
-        out_data = [organization,
-                    name,
+        try:
+            age = browser.find_element('xpath',
+                                       '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[15]/td[2]/p').text
+        except Exception:
+            age = ''
+
+
+        out_data = [name,
+                    age,
                     phone,
                     email,
                     vacantion]
-        try:
-            with open("koo.csv", mode="a", encoding='utf-8', errors='ignore') as csv_file:
-                file_writer = csv.writer(csv_file, delimiter=";")
-                file_writer.writerow(out_data)
-        except Exception:
-            continue
+        if out_data[0] == '':
+            input('Введите капчу и нажмите ENTER! ')
+        csv_writer(out_data)
+        close_book()
+        time.sleep(random.randint(1, waiter))
+    browser.close()
+    browser.quit()
+
+
+def close_book(need_book=3):
+    all_books = len(browser.window_handles)
+    if all_books >= need_book:
+        browser.switch_to.window(browser.window_handles[0])
         browser.close()
-        browser.quit()
+        time.sleep(1)
 
 
 def main():
-
+    global waiter
     page = 1
-    # base_url = 'https://joblab.ru/search.php?r=vac&srregion=50&srcity%5B%5D=77&page='
-    base_url = 'https://joblab.ru/search.php?r=res&srregion=50&srcity%5B%5D=77&page='
-    end_url = '&submit=1'
-
-    while page != 3:
-        url = base_url + str(page) + end_url
-        get_html_data(get_html_url(get_requests(url)))
-
+    high_page = int(input('Введите глубину парсинга  ')) + 1
+    row_url = input('Вставьте ссылку для парсинга  ')
+    waiter = int(input('Укажите максимальное время паузы '))
+    result_list_url = []
+    while page != high_page:
+        l = row_url.split('&srcategory')
+        url = ''.join(l[0]) + f'&page={str(page)}' + ''.join(l[1])  # в цикле собираем все урл
+        result_list_url.extend(get_html_url(get_requests(url)))
         print('стр.№ ', page)
         page += 1
+
+    get_html_data(result_list_url)  # достаем данные из собраных урл
 
 
 if __name__ == '__main__':

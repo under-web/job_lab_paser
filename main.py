@@ -27,12 +27,12 @@ def get_html_url(html):
             print('https://joblab.ru' + i.get('href'))
     return clear_url
 
-def csv_writer(out_data):
-    with open("koo.csv", mode="a", encoding='utf-8', errors='ignore') as csv_file:
+def csv_writer(out_data, name_file):
+    with open(f"{name_file}.csv", mode="a", encoding='utf-8', errors='ignore') as csv_file:
         file_writer = csv.writer(csv_file, delimiter=";")
         file_writer.writerow(out_data)
 
-def get_html_data(clear_url):
+def get_html_data(clear_url, name_file):
     opts = Options()
     opts.headless = True
     assert opts.headless
@@ -41,30 +41,20 @@ def get_html_data(clear_url):
     browser = webdriver.Firefox()
     browser.get('https://joblab.ru/')
 
-    input('Нажмите ENTER')
+    input(' Введите логин пароль и нажмите ENTER')
     for url in clear_url:
         time.sleep(1)
         browser.switch_to.window(browser.window_handles[-1])
-        browser.execute_script(f"window.open('{url}')")
+        browser.get(f'{url}')
         time.sleep(1)
         browser.switch_to.window(browser.window_handles[-1])
-        # try:
-        #     kaptha = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/form/table/tbody').text
-        #     if 'Чтобы продолжить' in kaptha:
-        #         input('Введите капчу и нажмите ENTER! ')
-        # except Exception:
-        #     kaptha = ''
-        #     print('ok')
+
 
         try:
             vacantion = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/h1').text
         except Exception:
             vacantion = ''
 
-        # try:
-        #     organization = browser.find_element('xpath', '/html/body/table/tbody/tr[2]/td/div/table/tbody/tr/td/table[1]/tbody/tr[1]/td[2]/p/b/a').text
-        # except Exception:
-        #     organization = ''
 
         try:
             name = browser.find_element('xpath',
@@ -106,27 +96,29 @@ def get_html_data(clear_url):
                     vacantion]
         if out_data[0] == '':
             input('Введите капчу и нажмите ENTER! ')
-        csv_writer(out_data)
-        close_book()
+        csv_writer(out_data, name_file)
+        # close_book()
         time.sleep(random.randint(1, waiter))
     browser.close()
     browser.quit()
 
 
-def close_book(need_book=3):
-    all_books = len(browser.window_handles)
-    if all_books >= need_book:
-        browser.switch_to.window(browser.window_handles[0])
-        browser.close()
-        time.sleep(1)
+# def close_book(need_book=3):
+#     all_books = len(browser.window_handles)
+#     if all_books >= need_book:
+#         browser.switch_to.window(browser.window_handles[0])
+#         browser.close()
+#         time.sleep(1)
 
 
 def main():
     global waiter
     page = 1
-    high_page = int(input('Введите глубину парсинга  ')) + 1
-    row_url = input('Вставьте ссылку для парсинга  ')
-    waiter = int(input('Укажите максимальное время паузы '))
+    high_page = int(input('Введите глубину парсинга (стр.): ')) + 1
+    row_url = input('Вставьте ссылку для парсинга: ')
+    waiter = int(input('Укажите максимальное время паузы (сек):'))
+    name_file = (input('Придумайте название для файла (Например - data или output): '))
+
     result_list_url = []
     while page != high_page:
         l = row_url.split('&srcategory')
@@ -135,7 +127,7 @@ def main():
         print('стр.№ ', page)
         page += 1
 
-    get_html_data(result_list_url)  # достаем данные из собраных урл
+    get_html_data(result_list_url, name_file)  # достаем данные из собраных урл
 
 
 if __name__ == '__main__':
